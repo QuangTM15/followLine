@@ -2,18 +2,24 @@
 #include "config.h"
 #include "motor.h"
 
-// initialize motor pins and PWM
+// current speed (để smooth)
+static int currentLeft = 0;
+static int currentRight = 0;
+
+// tốc độ thay đổi mỗi lần (giảm giật)
+#define ACC_STEP 10
+
+// =====================================================
+// INIT
+// =====================================================
 void motorInit()
 {
-    // setup PWM channels
     ledcSetup(0, PWM_FREQ, PWM_RES);
     ledcSetup(1, PWM_FREQ, PWM_RES);
 
-    // attach PWM pins
     ledcAttachPin(LEFT_MOTOR_PWM, 0);
     ledcAttachPin(RIGHT_MOTOR_PWM, 1);
 
-    // setup direction pins
     pinMode(LEFT_MOTOR_DIR1, OUTPUT);
     pinMode(LEFT_MOTOR_DIR2, OUTPUT);
 
@@ -23,57 +29,67 @@ void motorInit()
     stopMotors();
 }
 
-// set motor PWM speed
+// =====================================================
+// SET DIRECTION + SPEED (gộp lại)
+// =====================================================
 void setMotorSpeed(int left, int right)
 {
-    left  = constrain(left, 0, PWM_MAX);
-    right = constrain(right, 0, PWM_MAX);
+    // smooth tăng giảm tốc
+    if (left > currentLeft) currentLeft += ACC_STEP;
+    else if (left < currentLeft) currentLeft -= ACC_STEP;
 
-    ledcWrite(0, left);
-    ledcWrite(1, right);
-}
+    if (right > currentRight) currentRight += ACC_STEP;
+    else if (right < currentRight) currentRight -= ACC_STEP;
 
-// set motor direction
-void setMotorDirection(int leftDir, int rightDir)
-{
-    // LEFT MOTOR
-    if(leftDir == 1)
+    // constrain
+    currentLeft  = constrain(currentLeft, -PWM_MAX, PWM_MAX);
+    currentRight = constrain(currentRight, -PWM_MAX, PWM_MAX);
+
+    // ===== LEFT MOTOR =====
+    if (currentLeft > 0)
     {
         digitalWrite(LEFT_MOTOR_DIR1, HIGH);
         digitalWrite(LEFT_MOTOR_DIR2, LOW);
+        ledcWrite(0, currentLeft);
     }
-    else if(leftDir == -1)
+    else if (currentLeft < 0)
     {
         digitalWrite(LEFT_MOTOR_DIR1, LOW);
         digitalWrite(LEFT_MOTOR_DIR2, HIGH);
+        ledcWrite(0, -currentLeft);
     }
     else
     {
-        digitalWrite(LEFT_MOTOR_DIR1, LOW);
-        digitalWrite(LEFT_MOTOR_DIR2, LOW);
+        ledcWrite(0, 0);
     }
 
-    // RIGHT MOTOR
-    if(rightDir == 1)
+    // ===== RIGHT MOTOR =====
+    if (currentRight > 0)
     {
         digitalWrite(RIGHT_MOTOR_DIR1, HIGH);
         digitalWrite(RIGHT_MOTOR_DIR2, LOW);
+        ledcWrite(1, currentRight);
     }
-    else if(rightDir == -1)
+    else if (currentRight < 0)
     {
         digitalWrite(RIGHT_MOTOR_DIR1, LOW);
         digitalWrite(RIGHT_MOTOR_DIR2, HIGH);
+        ledcWrite(1, -currentRight);
     }
     else
     {
-        digitalWrite(RIGHT_MOTOR_DIR1, LOW);
-        digitalWrite(RIGHT_MOTOR_DIR2, LOW);
+        ledcWrite(1, 0);
     }
 }
 
-// stop both motors
+// =====================================================
+// STOP
+// =====================================================
 void stopMotors()
 {
+    currentLeft = 0;
+    currentRight = 0;
+
     ledcWrite(0, 0);
     ledcWrite(1, 0);
 

@@ -8,10 +8,12 @@ float sensorNormalized[NUM_SENSORS];
 // ===== CONFIG =====
 #define FILTER_SAMPLES 5
 
-#define SENSOR_MIN 500
-#define SENSOR_MAX 3500
+// min/max cho từng sensor
+static int sensorMin[NUM_SENSORS];
+static int sensorMax[NUM_SENSORS];
+static bool isCalibrated = false;
 
-
+// weights
 static const int weights[NUM_SENSORS] = {-5, -3, -1, 1, 3, 5};
 
 static float lastPosition = 0;
@@ -28,7 +30,37 @@ void sensorsInit()
 }
 
 // =====================================================
-// FILTER (giảm nhiễu analog)
+// CALIBRATION
+// =====================================================
+void calibrateSensors(int durationMs)
+{
+    // init
+    for (int i = 0; i < NUM_SENSORS; i++)
+    {
+        sensorMin[i] = 4095;
+        sensorMax[i] = 0;
+    }
+
+    unsigned long start = millis();
+
+    while (millis() - start < durationMs)
+    {
+        for (int i = 0; i < NUM_SENSORS; i++)
+        {
+            int val = analogRead(sensorPins[i]);
+
+            if (val < sensorMin[i]) sensorMin[i] = val;
+            if (val > sensorMax[i]) sensorMax[i] = val;
+        }
+
+        delay(5);
+    }
+
+    isCalibrated = true;
+}
+
+// =====================================================
+// FILTER
 // =====================================================
 static int readAnalogFiltered(int pin)
 {
@@ -50,15 +82,29 @@ void readLineSensors()
 {
     for (int i = 0; i < NUM_SENSORS; i++)
     {
-        // đọc raw
         int raw = readAnalogFiltered(sensorPins[i]);
         sensorValues[i] = raw;
 
-        // normalize: đen = 1, trắng = 0
-        float value = (SENSOR_MAX - raw) / (float)(SENSOR_MAX - SENSOR_MIN);
+        float value;
+
+        if (isCalibrated)
+        {
+            int minV = sensorMin[i];
+            int maxV = sensorMax[i];
+
+            if (maxV - minV > 0)
+                value = (maxV - raw) / (float)(maxV - minV);
+            else
+                value = 0;
+        }
+        else
+        {
+            value = 1.0 - (raw / 4095.0);
+        }
+
         value = constrain(value, 0.0, 1.0);
 
-        // deadzone chống nhiễu
+        // deadzone
         if (value < 0.1) value = 0;
         if (value > 0.9) value = 1;
 
@@ -80,20 +126,22 @@ float calculateLinePosition()
         denominator += sensorNormalized[i];
     }
 
-    // mất line
-    if (denominator < 0.05)
+    if (denominator < 0.03)
     {
-        return lastPosition;
+        if (lastPosition > 0.2) return 6;
+        if (lastPosition < -0.2) return -6;
+        return 6;
     }
 
     float position = numerator / denominator;
+    position = 0.7 * position + 0.3 * lastPosition;
     lastPosition = position;
 
     return position;
 }
 
 // =====================================================
-// DEBUG
+// DEBUG (optional)
 // =====================================================
 void debugSensors()
 {

@@ -11,6 +11,7 @@ extern float sensorNormalized[NUM_SENSORS];
 void sensorsInit();
 void readLineSensors();
 float calculateLinePosition();
+void calibrateSensors(int durationMs);
 
 // debug (optional)
 void debugSensors();
