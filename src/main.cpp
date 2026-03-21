@@ -4,6 +4,7 @@
 #include "sensor.h"
 #include "motor.h"
 #include "pid.h"
+#include "map.h"
 
 void setup()
 {
@@ -17,17 +18,18 @@ void setup()
     sensorsInit();
     motorInit();
     pidInit();
+    mapInit();  
 
     delay(1000);
 
-    // calibrate sensor
     calibrateSensors(3000);
-
     Serial.println("START");
+    delay(2000);
 }
 
 void loop()
 {
     readLineSensors();
-    updateLineFollowing();
+    mapUpdate();  
+    delay(5);
 }

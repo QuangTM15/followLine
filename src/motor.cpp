@@ -99,3 +99,36 @@ void stopMotors()
     digitalWrite(RIGHT_MOTOR_DIR1, LOW);
     digitalWrite(RIGHT_MOTOR_DIR2, LOW);
 }
+
+void setMotorRaw(int left, int right)
+{
+    // LEFT
+    if (left > 0)
+    {
+        digitalWrite(LEFT_MOTOR_DIR1, HIGH);
+        digitalWrite(LEFT_MOTOR_DIR2, LOW);
+        ledcWrite(0, left);
+    }
+    else if (left < 0)
+    {
+        digitalWrite(LEFT_MOTOR_DIR1, LOW);
+        digitalWrite(LEFT_MOTOR_DIR2, HIGH);
+        ledcWrite(0, -left);
+    }
+    else ledcWrite(0, 0);
+
+    // RIGHT
+    if (right > 0)
+    {
+        digitalWrite(RIGHT_MOTOR_DIR1, HIGH);
+        digitalWrite(RIGHT_MOTOR_DIR2, LOW);
+        ledcWrite(1, right);
+    }
+    else if (right < 0)
+    {
+        digitalWrite(RIGHT_MOTOR_DIR1, LOW);
+        digitalWrite(RIGHT_MOTOR_DIR2, HIGH);
+        ledcWrite(1, -right);
+    }
+    else ledcWrite(1, 0);
+}

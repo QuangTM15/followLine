@@ -16,4 +16,6 @@ void setMotorDirection(int leftDir, int rightDir);
 // stop both motors
 void stopMotors();
 
+void setMotorRaw(int left, int right);
+
 #endif
