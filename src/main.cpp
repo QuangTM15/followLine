@@ -23,8 +23,6 @@ void setup()
     delay(1000);
 
     calibrateSensors(3000);
-    Serial.println("START");
-    delay(2000);
 }
 
 void loop()

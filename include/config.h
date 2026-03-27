@@ -21,10 +21,10 @@ const int sensorPins[NUM_SENSORS] = {33, 34, 35, 25, 26, 27};
 // ================= PWM =================
 #define PWM_FREQ 5000
 #define PWM_RES 8
-#define PWM_MAX 220
+#define PWM_MAX 180
 
-// ================= SPEED =================
-#define BASE_SPEED 180
+// ================= SPEED =================       
+#define BASE_SPEED 95
 
 // ================= ANALOG =================
 #define SENSOR_THRESHOLD 2000

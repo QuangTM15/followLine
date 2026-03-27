@@ -4,8 +4,8 @@
 #include "config.h"
 
 // ===== PID =====
-static float Kp = 40.0;
-static float Kd = 10.0;
+static float Kp = 35.0;
+static float Kd = 8.0;
 
 static float lastError = 0;
 
