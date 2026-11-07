@@ -1,33 +1,33 @@
+
 #include <Arduino.h>
-#include <WiFi.h>
 #include "config.h"
-#include "sensor.h"
 #include "motor.h"
-#include "pid.h"
-#include "map.h"
+
+#define MOTOR_STBY 23
 
 void setup()
 {
-    Serial.begin(9600);
+    Serial.begin(115200);
 
-    WiFi.mode(WIFI_OFF);
-    btStop();
-
-    analogSetAttenuation(ADC_11db);
-
-    sensorsInit();
+    // Initialize motor driver
     motorInit();
-    pidInit();
-    mapInit();  
+
+    // Enable TB6612FNG
+    pinMode(MOTOR_STBY, OUTPUT);
+    digitalWrite(MOTOR_STBY, HIGH);
 
     delay(1000);
 
-    calibrateSensors(3000);
+    Serial.println("Testing motor.cpp...");
+
+    // Left motor reversed according to hardware test
+    // Right motor forward
+    setMotorRaw(-200, 200);
+
+    Serial.println("Both motors should run forward!");
 }
 
 void loop()
 {
-    readLineSensors();
-    mapUpdate();  
-    delay(5);
+    // Keep motors running
 }

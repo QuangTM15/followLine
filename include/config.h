@@ -10,8 +10,10 @@ const int sensorPins[NUM_SENSORS] = {33, 34, 35, 25, 26, 27};
 // ================= MOTOR =================
 // Left motor
 #define LEFT_MOTOR_PWM 18
-#define LEFT_MOTOR_DIR1 5
-#define LEFT_MOTOR_DIR2 17
+#define LEFT_MOTOR_DIR1 17
+#define LEFT_MOTOR_DIR2 5
+
+#define MOTOR_STBY 23
 
 // Right motor
 #define RIGHT_MOTOR_PWM 19
@@ -23,7 +25,7 @@ const int sensorPins[NUM_SENSORS] = {33, 34, 35, 25, 26, 27};
 #define PWM_RES 8
 #define PWM_MAX 180
 
-// ================= SPEED =================       
+// ================= SPEED =================
 #define BASE_SPEED 95
 
 // ================= ANALOG =================
