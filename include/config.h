@@ -47,8 +47,7 @@ const int sensorPins[NUM_SENSORS] = {
 #define MAX_STEP 8
 
 const int mapLeft[MAX_STEP] = {
-    0,
-    0,
+    0, 0,
     DIR_LEFT,
     DIR_RIGHT,
     DIR_RIGHT,
@@ -57,8 +56,7 @@ const int mapLeft[MAX_STEP] = {
     0};
 
 const int mapRight[MAX_STEP] = {
-    0,
-    0,
+    0, 0,
     DIR_RIGHT,
     DIR_LEFT,
     DIR_LEFT,
@@ -90,17 +88,35 @@ const int mapRight[MAX_STEP] = {
 // ================= FORWARD =================
 #define STEP1_FORWARD_SPEED BASE_SPEED
 #define STEP1_FORWARD_DELAY 10
+
 #define FORWARD_CLEAR_SPEED BASE_SPEED
 #define FORWARD_CLEAR_TIMEOUT_MS 1800U
 
 // ================= TURN =================
-#define TURN_LEFT_SPEED 110
+
+// turn(): rẽ thông thường
+// Tốc độ từng bánh độc lập
+
+#define TURN_LEFT_SPEED 140
 #define TURN_RIGHT_SPEED 110
-#define TURN_PIVOT_SPEED -110
+
+// Tốc độ quay ngược
+#define TURN_LEFT_PIVOT_SPEED -140
+#define TURN_RIGHT_PIVOT_SPEED -110
+
 #define TURN_LINE_STABLE_COUNT 3
 
-#define TURN2_SPEED 130
-#define TURN2_PIVOT_SPEED -130
+// ================= TURN2 =================
+
+// turn2(): rẽ bằng cách thoát line cũ
+// rồi bắt line mới
+
+#define TURN2_LEFT_SPEED 150
+#define TURN2_RIGHT_SPEED 130
+
+#define TURN2_LEFT_PIVOT_SPEED -150
+#define TURN2_RIGHT_PIVOT_SPEED -130
+
 #define TURN2_LINE_STABLE_COUNT 3
 
 #define TURN_SENSOR_TIMEOUT_MS 2200U
@@ -123,26 +139,30 @@ const int mapRight[MAX_STEP] = {
 #define BOTTLE_BACK_SPEED 75
 #define BOTTLE_BACK_LINE_STABLE 3
 
-// Gioi han an toan chi cho doan lui
+// Timeout chỉ dùng khi lùi
 #define BOTTLE_BACK_FIND_TIMEOUT_MS 3500U
 
 // ================= BOTTLE TURN =================
-// Map trai -> quay phai
-// Map phai -> quay trai
-// Khong dung thoi gian de quyet dinh goc quay
-#define BOTTLE_UTURN_SPEED 110
+
+// Map trái: quay phải
+// Map phải: quay trái
+
+// Hai bánh có tốc độ riêng
+#define BOTTLE_UTURN_LEFT_SPEED 140
+#define BOTTLE_UTURN_RIGHT_SPEED 110
+
+// Quay theo cảm biến, không dùng thời gian
 #define BOTTLE_UTURN_CLEAR_STABLE 3
 #define BOTTLE_UTURN_LINE_STABLE 3
 
 // ================= RETURN & FINISH =================
-
-// Xac nhan thoat giao diem cu truoc khi dem nga moi
 #define RETURN_REARM_STABLE_COUNT 3
 
-// Sau buoc 7, tiep tuc di den khi mat line
+// Sau bước 7, chạy đến khi mất line
 #define FINISH_NO_LINE_MS 50U
 
 // ================= COMPATIBILITY =================
+
 #define BOTTLE_ALIGN_MS BOTTLE_ALIGN_TIME
 #define BOTTLE_ALIGN_TIMEOUT_MS 1200U
 
@@ -156,6 +176,7 @@ const int mapRight[MAX_STEP] = {
 
 #define BOTTLE_BACK_TIMEOUT BOTTLE_BACK_FIND_TIMEOUT_MS
 #define BOTTLE_BACK_TIMEOUT_MS BOTTLE_BACK_FIND_TIMEOUT_MS
+
 #define BOTTLE_BACK_CENTER_TIME 0U
 #define BOTTLE_BACK_CENTER_MS BOTTLE_BACK_CENTER_TIME
 

@@ -168,8 +168,7 @@ static void forwardUntilNoLine()
 }
 
 // =====================================================
-// FORWARD STRAIGHT THROUGH INTERSECTION
-// Dung o STEP 7: di thang qua nga tu, khong dung
+// FORWARD UNTIL CLEAR
 // =====================================================
 static void forwardUntilClear()
 {
@@ -204,33 +203,34 @@ static void forwardUntilClear()
 // =====================================================
 static int readTurnDirection()
 {
-    float s0 = sensorNormalized[0];
-    float s1 = sensorNormalized[1];
-    float s4 = sensorNormalized[4];
-    float s5 = sensorNormalized[5];
+    float left =
+        sensorNormalized[4] +
+        sensorNormalized[5];
 
-    float left = s4 + s5;
-    float right = s0 + s1;
+    float right =
+        sensorNormalized[0] +
+        sensorNormalized[1];
 
     return (left > right) ? DIR_LEFT : DIR_RIGHT;
 }
 
 // =====================================================
-// TURN2 - ORIGINAL SENSOR TURN
+// TURN2 - SENSOR BASED TURN
 // =====================================================
 static void turn2(int dir)
 {
+    // Hai banh co toc do doc lap
     if (dir == DIR_RIGHT)
     {
         setMotorRaw(
-            TURN2_SPEED,
-            TURN2_PIVOT_SPEED);
+            TURN2_LEFT_SPEED,
+            TURN2_RIGHT_PIVOT_SPEED);
     }
     else
     {
         setMotorRaw(
-            TURN2_PIVOT_SPEED,
-            TURN2_SPEED);
+            TURN2_LEFT_PIVOT_SPEED,
+            TURN2_RIGHT_SPEED);
     }
 
     // Step 1: Leave old line
@@ -240,12 +240,11 @@ static void turn2(int dir)
     {
         readLineSensors();
 
-        float s2 = sensorNormalized[2];
-        float s3 = sensorNormalized[3];
+        bool offLine =
+            sensorNormalized[2] <= SENSOR_ACTIVE_THRESHOLD &&
+            sensorNormalized[3] <= SENSOR_ACTIVE_THRESHOLD;
 
-        if (
-            s2 <= SENSOR_ACTIVE_THRESHOLD &&
-            s3 <= SENSOR_ACTIVE_THRESHOLD)
+        if (offLine)
         {
             clearCount++;
         }
@@ -267,12 +266,11 @@ static void turn2(int dir)
     {
         readLineSensors();
 
-        float s2 = sensorNormalized[2];
-        float s3 = sensorNormalized[3];
+        bool onLine =
+            sensorNormalized[2] > SENSOR_ACTIVE_THRESHOLD &&
+            sensorNormalized[3] > SENSOR_ACTIVE_THRESHOLD;
 
-        if (
-            s2 > SENSOR_ACTIVE_THRESHOLD &&
-            s3 > SENSOR_ACTIVE_THRESHOLD)
+        if (onLine)
         {
             stableCount++;
         }
@@ -291,21 +289,22 @@ static void turn2(int dir)
 }
 
 // =====================================================
-// TURN - ORIGINAL SENSOR TURN
+// TURN - SENSOR BASED TURN
 // =====================================================
 static void turn(int dir)
 {
+    // Hai banh co toc do doc lap
     if (dir == DIR_RIGHT)
     {
         setMotorRaw(
-            TURN_RIGHT_SPEED,
-            TURN_PIVOT_SPEED);
+            TURN_LEFT_SPEED,
+            TURN_RIGHT_PIVOT_SPEED);
     }
     else
     {
         setMotorRaw(
-            TURN_PIVOT_SPEED,
-            TURN_LEFT_SPEED);
+            TURN_LEFT_PIVOT_SPEED,
+            TURN_RIGHT_SPEED);
     }
 
     int stableCount = 0;
@@ -314,12 +313,11 @@ static void turn(int dir)
     {
         readLineSensors();
 
-        float s2 = sensorNormalized[2];
-        float s3 = sensorNormalized[3];
+        bool onLine =
+            sensorNormalized[2] > SENSOR_ACTIVE_THRESHOLD &&
+            sensorNormalized[3] > SENSOR_ACTIVE_THRESHOLD;
 
-        if (
-            s2 > SENSOR_ACTIVE_THRESHOLD &&
-            s3 > SENSOR_ACTIVE_THRESHOLD)
+        if (onLine)
         {
             stableCount++;
         }
@@ -336,7 +334,7 @@ static void turn(int dir)
 }
 
 // =====================================================
-// ROTATE TOWARD RETURN LINE
+// TURN AFTER BOTTLE
 // MAP LEFT -> RIGHT
 // MAP RIGHT -> LEFT
 // =====================================================
@@ -344,15 +342,17 @@ static void rotateTowardReturnLine()
 {
     if (mapSide == LEFT_MAP)
     {
+        // Map trai -> quay phai
         setMotorRaw(
-            BOTTLE_UTURN_SPEED,
-            -BOTTLE_UTURN_SPEED);
+            BOTTLE_UTURN_LEFT_SPEED,
+            -BOTTLE_UTURN_RIGHT_SPEED);
     }
     else if (mapSide == RIGHT_MAP)
     {
+        // Map phai -> quay trai
         setMotorRaw(
-            -BOTTLE_UTURN_SPEED,
-            BOTTLE_UTURN_SPEED);
+            -BOTTLE_UTURN_LEFT_SPEED,
+            BOTTLE_UTURN_RIGHT_SPEED);
     }
     else
     {
@@ -405,11 +405,12 @@ void mapUpdate()
     // =====================================================
     case FOLLOW_LINE:
     {
-        // Sau khi quay ve P1, tranh dem lai giao diem cu.
-        // Chi cho dem nga moi sau khi da thay line hep.
+        // Tranh dem lai giao diem cu khi quay ve
         if (!returnIntersectionArmed)
         {
-            if (isOutOfIntersection() && !isNoLine())
+            if (
+                isOutOfIntersection() &&
+                !isNoLine())
             {
                 if (
                     returnArmCount <
@@ -447,9 +448,7 @@ void mapUpdate()
             stopMotors();
             delay(INTERSECTION_STOP_DELAY);
 
-            // =========================================
-            // STEP 1: GO STRAIGHT
-            // =========================================
+            // ===== STEP 1: GO STRAIGHT =====
             if (cnt == STEP_PASS_FIRST)
             {
                 setMotorRaw(
@@ -459,14 +458,12 @@ void mapUpdate()
                 delay(STEP1_FORWARD_DELAY);
             }
 
-            // =========================================
-            // STEP 2: DETECT MAP
-            // =========================================
+            // ===== STEP 2: DETECT MAP =====
             else if (cnt == STEP_DETECT_MAP)
             {
-                int turnDir = readTurnDirection();
+                int dir = readTurnDirection();
 
-                if (turnDir == DIR_LEFT)
+                if (dir == DIR_LEFT)
                 {
                     mapSide = LEFT_MAP;
                     currentMap = mapLeft;
@@ -478,12 +475,10 @@ void mapUpdate()
                 }
 
                 forwardUntilNoLine();
-                turn(turnDir);
+                turn(dir);
             }
 
-            // =========================================
-            // STEP 3: FOLLOW MAP
-            // =========================================
+            // ===== STEP 3: FOLLOW MAP =====
             else if (cnt == STEP_FOLLOW_MAP)
             {
                 forwardUntilNoLine();
@@ -494,9 +489,7 @@ void mapUpdate()
                 }
             }
 
-            // =========================================
-            // STEP 4: BOTTLE BRANCH
-            // =========================================
+            // ===== STEP 4: BOTTLE BRANCH =====
             else if (cnt == STEP_BOTTLE_BRANCH)
             {
                 if (currentMap != NULL)
@@ -514,33 +507,27 @@ void mapUpdate()
                 return;
             }
 
-            // =========================================
-            // STEP 5 + 6: RETURN TURNS
-            // =========================================
+            // ===== STEP 5 + 6: RETURN =====
             else if (
                 cnt == STEP_RETURN_1 ||
                 cnt == STEP_RETURN_2)
             {
                 if (currentMap != NULL)
                 {
-                    // Re theo map bang cam bien
                     turn2(currentMap[cnt]);
                 }
             }
 
-            // =========================================
-            // STEP 7: PASS FINAL CROSSROAD
-            // =========================================
+            // ===== STEP 7: PASS CROSSROAD =====
             else if (cnt >= STEP_FINAL_STOP)
             {
-                // KHONG DUNG TAI NGA TU NAY
                 // Di thang qua nga tu
                 forwardUntilClear();
 
                 intersectionCount = 0;
                 finishNoLineStartTime = 0;
 
-                // Tiep tuc PID den khi het line
+                // Chua dung, tiep tuc bam line
                 state = FINISH_FOLLOW_LINE;
                 return;
             }
@@ -558,7 +545,7 @@ void mapUpdate()
     }
 
     // =====================================================
-    // ALIGN AFTER ENTERING BOTTLE BRANCH
+    // ALIGN AFTER TURNING INTO BOTTLE BRANCH
     // =====================================================
     case BOTTLE_ALIGN:
     {
@@ -584,6 +571,7 @@ void mapUpdate()
     // =====================================================
     case BOTTLE_APPROACH:
     {
+        // Safety timeout
         if (
             millis() - bottleStartTime >=
             BOTTLE_FORWARD_TIMEOUT)
@@ -593,7 +581,7 @@ void mapUpdate()
             break;
         }
 
-        // Mat line tai cuoi nhanh chai
+        // Het line o cuoi nhanh chai
         if (isNoLine())
         {
             stopMotors();
@@ -616,7 +604,7 @@ void mapUpdate()
 
         noLineStartTime = 0;
 
-        // PID nhe khi tien den chai
+        // Chinh huong nhe khi tien den chai
         float error = calculateLinePosition();
 
         float correction =
@@ -642,7 +630,7 @@ void mapUpdate()
     }
 
     // =====================================================
-    // STOP AFTER PUSHING BOTTLE
+    // STOP AFTER BOTTLE
     // =====================================================
     case BOTTLE_STOP:
     {
@@ -666,8 +654,6 @@ void mapUpdate()
     // =====================================================
     case BOTTLE_BACK:
     {
-        // Chi la gioi han an toan khi lui,
-        // khong phai timeout quay.
         if (
             millis() - bottleStartTime >=
             BOTTLE_BACK_FIND_TIMEOUT_MS)
@@ -710,7 +696,7 @@ void mapUpdate()
     }
 
     // =====================================================
-    // TURN: LEAVE THE OLD LINE
+    // TURN: LEAVE OLD LINE
     // =====================================================
     case BOTTLE_TURN_CLEAR:
     {
@@ -721,8 +707,6 @@ void mapUpdate()
             break;
         }
 
-        // Map trai -> quay phai
-        // Map phai -> quay trai
         rotateTowardReturnLine();
 
         bool centerOffLine =
@@ -750,12 +734,11 @@ void mapUpdate()
     }
 
     // =====================================================
-    // TURN: FIND THE NEW LINE
+    // TURN: FIND NEW LINE
     // =====================================================
     case BOTTLE_TURN_FIND:
     {
-        // Khong co timeout quay
-        // Tiep tuc quay den khi bat lai line
+        // Quay theo cam bien, khong timeout
         rotateTowardReturnLine();
 
         if (isCenterOnLine())
@@ -776,11 +759,11 @@ void mapUpdate()
             lastDetectTime = millis();
             intersectionCount = 0;
 
-            // Khong dem lai line tai P1
+            // Tranh dem lai giao diem cu
             returnIntersectionArmed = false;
             returnArmCount = 0;
 
-            // Bat dau chay ve theo map
+            // Chay ve theo map
             state = FOLLOW_LINE;
         }
 
@@ -788,11 +771,10 @@ void mapUpdate()
     }
 
     // =====================================================
-    // AFTER STEP 7: FOLLOW TO THE END OF LINE
+    // AFTER STEP 7: FOLLOW TO END OF LINE
     // =====================================================
     case FINISH_FOLLOW_LINE:
     {
-        // Chi dung khi mat line sau nga tu cuoi
         if (isNoLine())
         {
             stopMotors();
