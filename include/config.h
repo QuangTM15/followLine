@@ -1,24 +1,23 @@
+
 #ifndef CONFIG_H
 #define CONFIG_H
 
 // ================= SENSOR =================
 #define NUM_SENSORS 6
 
-// Analog pins (sensor)
-const int sensorPins[NUM_SENSORS] = {33, 34, 35, 25, 26, 27};
+const int sensorPins[NUM_SENSORS] = {
+    33, 34, 35, 25, 26, 27};
 
 // ================= MOTOR =================
-// Left motor
 #define LEFT_MOTOR_PWM 18
 #define LEFT_MOTOR_DIR1 5
 #define LEFT_MOTOR_DIR2 17
 
-#define MOTOR_STBY 23
-
-// Right motor
 #define RIGHT_MOTOR_PWM 19
 #define RIGHT_MOTOR_DIR1 16
 #define RIGHT_MOTOR_DIR2 4
+
+#define MOTOR_STBY 23
 
 // ================= PWM =================
 #define PWM_FREQ 5000
@@ -26,14 +25,13 @@ const int sensorPins[NUM_SENSORS] = {33, 34, 35, 25, 26, 27};
 #define PWM_MAX 180
 
 // ================= SPEED & PID =================
-#define BASE_SPEED              90
-#define PID_KP                  35.0f
-#define PID_KD                  8.0f
+#define BASE_SPEED 90
+#define PID_KP 35.0f
+#define PID_KD 8.0f
 
-// Recovery khi lệch khỏi line nhiều
-#define RECOVERY_POS_THRESHOLD  4.0f
-#define RECOVERY_FAST_SPEED     180
-#define RECOVERY_SLOW_SPEED     20
+#define RECOVERY_POS_THRESHOLD 4.0f
+#define RECOVERY_FAST_SPEED 180
+#define RECOVERY_SLOW_SPEED 20
 
 // ================= ANALOG =================
 #define SENSOR_THRESHOLD 2000
@@ -43,57 +41,130 @@ const int sensorPins[NUM_SENSORS] = {33, 34, 35, 25, 26, 27};
 // ================= HARDWARE =================
 #define LED_PIN 2
 
-// ================= MAP & NAVIGATION =================
-#define DIR_LEFT  -1
-#define DIR_RIGHT  1
-#define MAX_STEP   8
+// ================= MAP =================
+#define DIR_LEFT -1
+#define DIR_RIGHT 1
+#define MAX_STEP 8
 
-const int mapLeft[MAX_STEP]  = {0, 0, DIR_LEFT,  DIR_RIGHT, DIR_RIGHT, DIR_LEFT,  DIR_RIGHT, 0};
-const int mapRight[MAX_STEP] = {0, 0, DIR_RIGHT, DIR_LEFT,  DIR_LEFT,  DIR_RIGHT, DIR_LEFT,  0};
+const int mapLeft[MAX_STEP] = {
+    0,
+    0,
+    DIR_LEFT,
+    DIR_RIGHT,
+    DIR_RIGHT,
+    DIR_LEFT,
+    DIR_RIGHT,
+    0};
 
-// Các mốc ngã tư (step) trên sa bàn
-#define STEP_PASS_FIRST     1
-#define STEP_DETECT_MAP     2
-#define STEP_FOLLOW_MAP     3
-#define STEP_BOTTLE_BRANCH  4
-#define STEP_RETURN_1       5
-#define STEP_RETURN_2       6
-#define STEP_FINAL_STOP     7
+const int mapRight[MAX_STEP] = {
+    0,
+    0,
+    DIR_RIGHT,
+    DIR_LEFT,
+    DIR_LEFT,
+    DIR_RIGHT,
+    DIR_LEFT,
+    0};
 
-// ================= INTERSECTION DETECTION =================
-#define DETECT_DELAY                  200
-#define INTERSECTION_MIN_ACTIVE       4
-#define INTERSECTION_MIN_SUM          3.0f
-#define INTERSECTION_STABLE_COUNT     3
-#define OUT_INTERSECTION_MAX_ACTIVE   2
+// ================= MAP STEPS =================
+#define STEP_PASS_FIRST 1
+#define STEP_DETECT_MAP 2
+#define STEP_FOLLOW_MAP 3
+#define STEP_BOTTLE_BRANCH 4
+#define STEP_RETURN_1 5
+#define STEP_RETURN_2 6
+#define STEP_FINAL_STOP 7
+
+// ================= INTERSECTION =================
+#define DETECT_DELAY 200
+
+#define INTERSECTION_MIN_ACTIVE 4
+#define INTERSECTION_MIN_SUM 3.0f
+#define INTERSECTION_STABLE_COUNT 3
+
+#define OUT_INTERSECTION_MAX_ACTIVE 2
 #define OUT_INTERSECTION_STABLE_COUNT 3
 
-// ================= MAP SPEEDS & DELAYS =================
-// Xử lý khi gặp ngã tư
-#define INTERSECTION_STOP_DELAY   10
+#define INTERSECTION_STOP_DELAY 10
 
-// Đi thẳng qua ngã đầu tiên (cnt == 1)
-#define STEP1_FORWARD_SPEED       BASE_SPEED
-#define STEP1_FORWARD_DELAY       10
+// ================= FORWARD =================
+#define STEP1_FORWARD_SPEED BASE_SPEED
+#define STEP1_FORWARD_DELAY 10
+#define FORWARD_CLEAR_SPEED BASE_SPEED
+#define FORWARD_CLEAR_TIMEOUT_MS 1800U
 
-// Đi thẳng thoát khỏi ngã tư (forwardUntilClear)
-#define FORWARD_CLEAR_SPEED       BASE_SPEED
+// ================= TURN =================
+#define TURN_LEFT_SPEED 110
+#define TURN_RIGHT_SPEED 110
+#define TURN_PIVOT_SPEED -110
+#define TURN_LINE_STABLE_COUNT 3
 
-// Hàm rẽ dò line (turn)
-#define TURN_LEFT_SPEED           110
-#define TURN_RIGHT_SPEED          110
-#define TURN_PIVOT_SPEED          -110
-#define TURN_LINE_STABLE_COUNT    3
+#define TURN2_SPEED 130
+#define TURN2_PIVOT_SPEED -130
+#define TURN2_LINE_STABLE_COUNT 3
 
-// Hàm rẽ vượt qua line hiện tại sang nhánh mới (turn2)
-#define TURN2_SPEED               130
-#define TURN2_PIVOT_SPEED        -130
-#define TURN2_LINE_STABLE_COUNT   3
+#define TURN_SENSOR_TIMEOUT_MS 2200U
 
-// Nhánh đâm tới chai & lùi về (FINAL_FORWARD & FINAL_BACK)
-#define FINAL_FORWARD_DURATION    1500
-#define FINAL_BACK_SPEED         -BASE_SPEED
-#define FINAL_BACK_DETECT_DELAY   100
-#define FINAL_BACK_STOP_DELAY     INTERSECTION_STOP_DELAY
+// ================= BOTTLE ALIGN =================
+#define BOTTLE_ALIGN_TIME 250U
+
+// ================= BOTTLE APPROACH =================
+#define BOTTLE_FORWARD_SPEED 75
+#define BOTTLE_FORWARD_KP 10.0f
+#define BOTTLE_MAX_CORRECTION 25
+
+#define BOTTLE_NO_LINE_TIME 35U
+#define BOTTLE_FORWARD_TIMEOUT 2500U
+
+// ================= BOTTLE STOP =================
+#define BOTTLE_STOP_TIME 120U
+
+// ================= BOTTLE BACK =================
+#define BOTTLE_BACK_SPEED 75
+#define BOTTLE_BACK_LINE_STABLE 3
+
+// Gioi han an toan chi cho doan lui
+#define BOTTLE_BACK_FIND_TIMEOUT_MS 3500U
+
+// ================= BOTTLE TURN =================
+// Map trai -> quay phai
+// Map phai -> quay trai
+// Khong dung thoi gian de quyet dinh goc quay
+#define BOTTLE_UTURN_SPEED 110
+#define BOTTLE_UTURN_CLEAR_STABLE 3
+#define BOTTLE_UTURN_LINE_STABLE 3
+
+// ================= RETURN & FINISH =================
+
+// Xac nhan thoat giao diem cu truoc khi dem nga moi
+#define RETURN_REARM_STABLE_COUNT 3
+
+// Sau buoc 7, tiep tuc di den khi mat line
+#define FINISH_NO_LINE_MS 50U
+
+// ================= COMPATIBILITY =================
+#define BOTTLE_ALIGN_MS BOTTLE_ALIGN_TIME
+#define BOTTLE_ALIGN_TIMEOUT_MS 1200U
+
+#define BOTTLE_APPROACH_SPEED BOTTLE_FORWARD_SPEED
+#define BOTTLE_APPROACH_KP BOTTLE_FORWARD_KP
+#define BOTTLE_APPROACH_MAX_CORR BOTTLE_MAX_CORRECTION
+#define BOTTLE_APPROACH_TIMEOUT_MS BOTTLE_FORWARD_TIMEOUT
+
+#define BOTTLE_NO_LINE_MS BOTTLE_NO_LINE_TIME
+#define BOTTLE_STOP_MS BOTTLE_STOP_TIME
+
+#define BOTTLE_BACK_TIMEOUT BOTTLE_BACK_FIND_TIMEOUT_MS
+#define BOTTLE_BACK_TIMEOUT_MS BOTTLE_BACK_FIND_TIMEOUT_MS
+#define BOTTLE_BACK_CENTER_TIME 0U
+#define BOTTLE_BACK_CENTER_MS BOTTLE_BACK_CENTER_TIME
+
+#define BOTTLE_BACK_IGNORE_MS 250U
+#define BOTTLE_BACK_SETTLE_MS 80U
+
+#define FINAL_BACK_STOP_DELAY INTERSECTION_STOP_DELAY
+#define FINAL_FORWARD_DURATION BOTTLE_FORWARD_TIMEOUT
+#define FINAL_BACK_SPEED (-BOTTLE_BACK_SPEED)
+#define FINAL_BACK_DETECT_DELAY 100U
 
 #endif
