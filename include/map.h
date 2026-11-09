@@ -6,5 +6,6 @@ void mapInit();
 
 // ================= MAIN =================
 void mapUpdate();
+bool isMapFinished();
 
 #endif

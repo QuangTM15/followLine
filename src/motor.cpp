@@ -41,10 +41,6 @@ void setMotorSpeed(int left, int right)
     if (right > currentRight) currentRight += ACC_STEP;
     else if (right < currentRight) currentRight -= ACC_STEP;
 
-    // constrain
-    currentLeft  = constrain(currentLeft, -PWM_MAX, PWM_MAX);
-    currentRight = constrain(currentRight, -PWM_MAX, PWM_MAX);
-
     // ===== LEFT MOTOR =====
     if (currentLeft > 0)
     {

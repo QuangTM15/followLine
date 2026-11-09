@@ -1,22 +1,11 @@
 #include <Arduino.h>
+#include "config.h"
 #include "map.h"
 #include "sensor.h"
 #include "motor.h"
 #include "pid.h"
 
-// ================= CONFIG =================
-#define DETECT_DELAY 300
-#define LED_PIN 2
-
-// ================= DIRECTION =================
-#define DIR_LEFT  -1
-#define DIR_RIGHT  1
-
-#define MAX_STEP 8
-
 // ================= MAP =================
-const int mapLeft[MAX_STEP]  = {0, 0, DIR_LEFT,  DIR_RIGHT, DIR_RIGHT,DIR_LEFT,DIR_RIGHT,0};
-const int mapRight[MAX_STEP] = {0, 0, DIR_RIGHT, DIR_LEFT,  DIR_LEFT,DIR_RIGHT,DIR_LEFT,0};
 static const int* currentMap = NULL;
 
 // ================= STATE =================
@@ -25,7 +14,8 @@ enum RobotState
     FOLLOW_LINE,
     FINAL_FORWARD,
     FINAL_BACK,
-    FINAL_TURN
+    FINAL_TURN,
+    FINAL_STOP
 };
 
 static RobotState state = FOLLOW_LINE;
@@ -42,58 +32,93 @@ static MapSide mapSide = UNKNOWN;
 // ================= VARIABLES =================
 static unsigned long lastDetectTime = 0;
 static uint8_t cnt = 0;
+static int intersectionCount = 0;
 
 // =====================================================
 // DETECT INTERSECTION
 // =====================================================
 static bool detectIntersection()
 {
-    float s0 = sensorNormalized[0];
-    float s1 = sensorNormalized[1];
-    float s2 = sensorNormalized[2];
-    float s3 = sensorNormalized[3];
-    float s4 = sensorNormalized[4];
-    float s5 = sensorNormalized[5];
-
     int active = 0;
+    float sum = 0.0f;
 
-    if (s0 > 0.5) active++;
-    if (s1 > 0.5) active++;
-    if (s2 > 0.5) active++;
-    if (s3 > 0.5) active++;
-    if (s4 > 0.5) active++;
-    if (s5 > 0.5) active++;
+    for (int i = 0; i < NUM_SENSORS; i++)
+    {
+        if (sensorNormalized[i] > SENSOR_ACTIVE_THRESHOLD)
+            active++;
+        sum += sensorNormalized[i];
+    }
 
-    float sum = s0 + s1 + s2 + s3 + s4 + s5;
-
-    return (active >= 4 && sum > 3.0);
+    return (active >= INTERSECTION_MIN_ACTIVE && sum > INTERSECTION_MIN_SUM);
 }
 
 static bool detectStableIntersection()
 {
-    static int count = 0;
-
     if (detectIntersection())
-        count++;
-    else if (count > 0)
-        count--;
+    {
+        if (intersectionCount < INTERSECTION_STABLE_COUNT)
+            intersectionCount++;
+    }
+    else if (intersectionCount > 0)
+    {
+        intersectionCount--;
+    }
 
-    return (count >= 3);
+    if (intersectionCount >= INTERSECTION_STABLE_COUNT)
+    {
+        intersectionCount = 0;
+        return true;
+    }
+
+    return false;
 }
 
 static bool isOutOfIntersection()
 {
     int active = 0;
 
-    for (int i = 0; i < 6; i++)
+    for (int i = 0; i < NUM_SENSORS; i++)
     {
-        if (sensorNormalized[i] > 0.5)
+        if (sensorNormalized[i] > SENSOR_ACTIVE_THRESHOLD)
             active++;
     }
 
-    // <=2 mắt sáng → đã ra khỏi ngã
-    return (active <= 2);
+    // <= OUT_INTERSECTION_MAX_ACTIVE mắt sáng → đã ra khỏi ngã
+    return (active <= OUT_INTERSECTION_MAX_ACTIVE);
 }
+
+static bool isNoLine()
+{
+    for (int i = 0; i < NUM_SENSORS; i++)
+    {
+        if (sensorNormalized[i] > SENSOR_ACTIVE_THRESHOLD)
+            return false;
+    }
+    return true;
+}
+
+static void forwardUntilNoLine()
+{
+    int stable = 0;
+
+    while (true)
+    {
+        readLineSensors();
+
+        setMotorRaw(FORWARD_CLEAR_SPEED, FORWARD_CLEAR_SPEED);
+
+        if (isNoLine())
+            stable++;
+        else if (stable > 0)
+            stable--;
+
+        if (stable >= OUT_INTERSECTION_STABLE_COUNT)
+            break;
+    }
+
+    stopMotors();
+}
+
 static void forwardUntilClear()
 {
     int stable = 0;
@@ -102,14 +127,14 @@ static void forwardUntilClear()
     {
         readLineSensors();
 
-        setMotorRaw(150, 150); // đi thẳng nhẹ
+        setMotorRaw(FORWARD_CLEAR_SPEED, FORWARD_CLEAR_SPEED); // đi thẳng nhẹ
 
         if (isOutOfIntersection())
             stable++;
         else if (stable > 0)
             stable--;
 
-        if (stable >= 3)
+        if (stable >= OUT_INTERSECTION_STABLE_COUNT)
             break;
     }
     // // kick nhẹ để ổn định
@@ -138,33 +163,32 @@ static int readTurnDirection()
 
 static void turn2(int dir)
 {
-    int speed = 200;
-
+    // ===== 1. BẮT ĐẦU QUAY =====
     if (dir == DIR_RIGHT)
-    {
-        setMotorRaw(speed, 1);
-        delay(800);
-    }
+        setMotorRaw(TURN2_SPEED, TURN2_PIVOT_SPEED);
     else
+        setMotorRaw(TURN2_PIVOT_SPEED, TURN2_SPEED);
+
+    // ===== 2. CHỜ THOÁT KHỎI LINE HIỆN TẠI (RA VÙNG TRẮNG) =====
+    int clearCount = 0;
+
+    while (true)
     {
-        setMotorRaw(1, speed);
-        delay(1000);
+        readLineSensors();
+
+        float s2 = sensorNormalized[2];
+        float s3 = sensorNormalized[3];
+
+        if (s2 <= SENSOR_ACTIVE_THRESHOLD && s3 <= SENSOR_ACTIVE_THRESHOLD)
+            clearCount++;
+        else if (clearCount > 0)
+            clearCount--;
+
+        if (clearCount >= TURN2_LINE_STABLE_COUNT)
+            break;
     }
-    setMotorRaw(180,180);
-    delay(50);
-}
 
-static void turn(int dir)
-{
-    int speed = 180;
-
-    // ===== 1. QUAY (kick mạnh để thoát tâm ngã) =====
-    if (dir == DIR_RIGHT)
-        setMotorRaw(speed-10, 1);
-    else
-        setMotorRaw(1, speed);
-
-    // ===== 4. BẮT LINE MỚI =====
+    // ===== 3. CHỜ BẮT VÀO ĐƯỜNG THẲNG MỚI =====
     int stableCount = 0;
 
     while (true)
@@ -174,18 +198,44 @@ static void turn(int dir)
         float s2 = sensorNormalized[2];
         float s3 = sensorNormalized[3];
 
-        if (s2 > 0.5 && s3 > 0.5)
+        if (s2 > SENSOR_ACTIVE_THRESHOLD && s3 > SENSOR_ACTIVE_THRESHOLD)
             stableCount++;
         else if (stableCount > 0)
             stableCount--;
 
-        if (stableCount >= 3)
+        if (stableCount >= TURN2_LINE_STABLE_COUNT)
             break;
     }
 
-    // // // ===== 5. KICK NHẸ → CHO PID =====
-    setMotorRaw(200, 200);
-    delay(50);
+    stopMotors();
+}
+
+static void turn(int dir)
+{
+    // ===== 1. QUAY =====
+    if (dir == DIR_RIGHT)
+        setMotorRaw(TURN_RIGHT_SPEED, TURN_PIVOT_SPEED);
+    else
+        setMotorRaw(TURN_PIVOT_SPEED, TURN_LEFT_SPEED);
+
+    // ===== 2. BẮT LINE MỚI =====
+    int stableCount = 0;
+
+    while (true)
+    {
+        readLineSensors();
+
+        float s2 = sensorNormalized[2];
+        float s3 = sensorNormalized[3];
+
+        if (s2 > SENSOR_ACTIVE_THRESHOLD && s3 > SENSOR_ACTIVE_THRESHOLD)
+            stableCount++;
+        else if (stableCount > 0)
+            stableCount--;
+
+        if (stableCount >= TURN_LINE_STABLE_COUNT)
+            break;
+    }
 }
 
 // =====================================================
@@ -193,11 +243,20 @@ static void turn(int dir)
 // =====================================================
 void mapInit()
 {
+    state = FOLLOW_LINE;
+    mapSide = UNKNOWN;
+    currentMap = NULL;
     lastDetectTime = 0;
     cnt = 0;
+    intersectionCount = 0;
 
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, LOW);
+}
+
+bool isMapFinished()
+{
+    return (state == FINAL_STOP);
 }
 
 // =====================================================
@@ -208,35 +267,28 @@ void mapUpdate()
     switch (state)
     {
         // =====================================================
-        // FOLLOW LINE (PHẦN ĐI - GIỮ NGUYÊN)
+        // FOLLOW LINE
         // =====================================================
         case FOLLOW_LINE:
         {
-            bool hasIntersection = detectStableIntersection();
-
-            if (hasIntersection && millis() - lastDetectTime > DETECT_DELAY)
+            if (millis() - lastDetectTime > DETECT_DELAY && detectStableIntersection())
             {
-                if (cnt !=0) {
-                    stopMotors();
-                    delay(200);
-                }
-                setMotorRaw(150,150);
-                delay(30);
-
-                lastDetectTime = millis();
                 cnt++;
-
                 digitalWrite(LED_PIN, HIGH);
 
+                // Dừng lại khoảng 1s khi nhận diện được ngã tư rồi mới đi tiếp
+                stopMotors();
+                delay(INTERSECTION_STOP_DELAY);
+
                 // ===== CASE 1: đi thẳng =====
-                if (cnt == 1)
+                if (cnt == STEP_PASS_FIRST)
                 {
-                    setMotorRaw(140, 140);
-                    delay(20);
+                    setMotorRaw(STEP1_FORWARD_SPEED, STEP1_FORWARD_SPEED);
+                    delay(STEP1_FORWARD_DELAY);
                 }
 
                 // ===== CASE 2: xác định map =====
-                else if (cnt == 2)
+                else if (cnt == STEP_DETECT_MAP)
                 {
                     int turnDir = readTurnDirection();
 
@@ -251,33 +303,54 @@ void mapUpdate()
                         currentMap = mapRight;
                     }
 
+                    forwardUntilNoLine();
                     turn(turnDir);
                 }
 
-                // ===== CASE 3 + 4 =====
-                else if (cnt == 3 || cnt == 4||cnt==5 || cnt ==6)
+                // ===== CASE 3: đi theo map =====
+                else if (cnt == STEP_FOLLOW_MAP)
                 {
-                    if (cnt==3) {
-                    forwardUntilClear();
-                    }
-                    if (currentMap != NULL && cnt!=4 && cnt!=5 && cnt!=6)
+                    forwardUntilNoLine();
+                    if (currentMap != NULL)
                     {
                         int dir = currentMap[cnt];
                         turn(dir);
                     }
-                    if(cnt==5 && cnt==6){
-                        int dir = currentMap[cnt];
-                        turn2(dir);
-                    }
-                    if (cnt == 4)
+                }
+
+                // ===== CASE 4: rẽ vào nhánh đâm tới chai =====
+                else if (cnt == STEP_BOTTLE_BRANCH)
+                {
+                    if (currentMap != NULL)
                     {
                         int dir = currentMap[cnt];
                         turn2(dir);
-                        state = FINAL_FORWARD;
-                        return;
+                    }
+                    lastDetectTime = millis();
+                    state = FINAL_FORWARD;
+                    return;
+                }
+
+                // ===== CASE 5 + 6: rẽ theo map về đích =====
+                else if (cnt == STEP_RETURN_1 || cnt == STEP_RETURN_2)
+                {
+                    if (currentMap != NULL)
+                    {
+                        int dir = currentMap[cnt];
+                        turn2(dir);
                     }
                 }
 
+                // ===== CASE 7: đến đích cuối cùng -> dừng hẳn =====
+                else if (cnt >= STEP_FINAL_STOP)
+                {
+                    stopMotors();
+                    digitalWrite(LED_PIN, LOW);
+                    state = FINAL_STOP;
+                    return;
+                }
+
+                lastDetectTime = millis();
                 return;
             }
             else
@@ -300,9 +373,10 @@ void mapUpdate()
 
             updateLineFollowing();
 
-            if (millis() - startTime > 1500)
+            if (millis() - startTime > FINAL_FORWARD_DURATION)
             { 
                 startTime = 0;
+                intersectionCount = 0;
                 state = FINAL_BACK;
             }
             break;
@@ -315,16 +389,16 @@ void mapUpdate()
         {
             static unsigned long lastDetect = 0;
 
-            setMotorRaw(-160, -160);
+            setMotorRaw(FINAL_BACK_SPEED, FINAL_BACK_SPEED);
 
             bool hasIntersection = detectStableIntersection();
 
-            if (hasIntersection && millis() - lastDetect > 300)
+            if (hasIntersection && millis() - lastDetect > FINAL_BACK_DETECT_DELAY)
             {
                 lastDetect = millis();
 
                 stopMotors();
-                delay(200);
+                delay(FINAL_BACK_STOP_DELAY);
 
                 state = FINAL_TURN;
             }
@@ -345,8 +419,19 @@ void mapUpdate()
                 dir = DIR_LEFT;
 
             turn2(dir);
-            
+
+            lastDetectTime = millis();
+            intersectionCount = 0;
             state = FOLLOW_LINE;
+            break;
+        }
+
+        // =====================================================
+        // ĐÍCH CUỐI CÙNG (DỪNG HẲN)
+        // =====================================================
+        case FINAL_STOP:
+        {
+            stopMotors();
             break;
         }
 
